@@ -1,42 +1,54 @@
-from PyQt5.QtWidgets import QStyledItemDelegate, QPushButton, QMessageBox
-from PyQt5.QtCore import QModelIndex
+from PyQt5.QtWidgets import QStyledItemDelegate, QMessageBox
+from PyQt5.QtCore import Qt, pyqtSignal
 from database import delete_appointment
 
+
 class DeleteButtonDelegate(QStyledItemDelegate):
-    def __init__(self, parent, refresh_callback):
+    deleted = pyqtSignal()
+
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.refresh_callback = refresh_callback
 
-    def createEditor(self, parent, option, index):
-        button = QPushButton("🗑")
-        button.setStyleSheet("""
-            QPushButton {
-                background-color: #e63946;
-                color: white;
-                border-radius: 6px;
-                padding: 4px;
-            }
-            QPushButton:hover {
-                background-color: #c1121f;
-            }
-        """)
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.drawText(option.rect, Qt.AlignCenter, "🗑 Delete")
+        painter.restore()
 
-        button.clicked.connect(lambda: self.delete_row(index))
-        return button
+    def editorEvent(self, event, model, option, index):
+        if event.type() != event.MouseButtonRelease:
+            return False
 
-    def delete_row(self, index: QModelIndex):
-        model = index.model()
         row = index.row()
 
-        appointment_id = model._df.iloc[row]["id"]
+        try:
+            appointment_id = int(model._df.iloc[row]["id"])
+        except Exception as e:
+            QMessageBox.critical(
+                option.widget,
+                "Delete error",
+                f"Could not resolve appointment ID:\n{e}"
+            )
+            return True
 
         confirm = QMessageBox.question(
-            None,
-            "Delete Appointment",
-            "Are you sure you want to delete this appointment?",
+            option.widget,
+            "Confirm delete",
+            "Delete this appointment?",
             QMessageBox.Yes | QMessageBox.No
         )
 
-        if confirm == QMessageBox.Yes:
-            delete_appointment(appointment_id)
-            self.refresh_callback()
+        if confirm != QMessageBox.Yes:
+            return True
+
+        # ---- DELETE FROM DB ----
+        delete_appointment(appointment_id)
+
+        # ---- UPDATE MODEL ----
+        model.beginResetModel()
+        model._df.drop(model._df.index[row], inplace=True)
+        model._df.reset_index(drop=True, inplace=True)
+        model.endResetModel()
+
+        self.deleted.emit()
+
+        return True

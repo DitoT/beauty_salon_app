@@ -55,7 +55,6 @@ class MainWindow(QMainWindow):
         widget.setLayout(self.layout)
         self.setCentralWidget(widget)
 
-
         self.refresh()
 
     def refresh(self):
@@ -78,7 +77,8 @@ class MainWindow(QMainWindow):
         self.revenue_by_service.setText(text)
 
         # ---- ADD DELETE COLUMN (THIS IS THE MAGIC) ----
-        df["Delete"] = "Delete"
+        df = load_appointments().copy()
+        df["Delete"] = ""
 
         # ---- SET TABLE MODEL ----
         model = PandasTableModel(df)
@@ -87,9 +87,10 @@ class MainWindow(QMainWindow):
         # ---- ADD DELETE BUTTON DELEGATE ----
         delete_column_index = df.columns.get_loc("Delete")
 
-        delegate = DeleteButtonDelegate(self.table, self.refresh)
+        delegate = DeleteButtonDelegate(self.table)
+        delegate.deleted.connect(self.refresh)
         self.table.setItemDelegateForColumn(delete_column_index, delegate)
-        self.table.setColumnWidth(delete_column_index, 60)
+        self.table.setColumnWidth(delete_column_index, 80)
 
         # ---- TABLE LOOK ----
         self.table.verticalHeader().setVisible(False)
@@ -98,6 +99,11 @@ class MainWindow(QMainWindow):
         # ---- CHART ----
         service_data = df.groupby("service")["price"].sum()
         self.chart.update_chart(service_data)
+
+        # --- Hiding ID ---
+        id_col = df.columns.get_loc("id")
+        self.table.setColumnHidden(id_col, True)
+        self.table.setSortingEnabled(False) # Disables sorting on Delete column
 
     def open_add(self):
         self.add_window = AddAppointmentWindow()
