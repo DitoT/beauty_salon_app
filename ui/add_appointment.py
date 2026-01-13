@@ -1,3 +1,4 @@
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QMessageBox, QDateEdit,
@@ -12,9 +13,12 @@ class AddAppointmentWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("New Appointment")
-        self.setFixedSize(300, 400)
+        self.setFixedSize(350, 500)
 
         layout = QVBoxLayout()
+        font_label = QFont("Arial", 12, QFont.Bold)
+        font_input = QFont("Arial", 12)
+        input_height = 35
 
         self.date = QDateEdit()
         self.date.setDate(QDate.currentDate())
@@ -33,17 +37,26 @@ class AddAppointmentWindow(QWidget):
         self.duration.setSuffix(" min")
 
         save_btn = QPushButton("Save Appointment")
+        save_btn.setFont(font_label)
+        save_btn.setMinimumHeight(input_height + 5)
         save_btn.clicked.connect(self.save)
 
-        for label, widget in [
+        fields = [
             ("Date", self.date),
             ("Client", self.client),
             ("Service", self.service),
             ("Employee", self.employee),
             ("Price", self.price),
             ("Duration", self.duration),
-        ]:
-            layout.addWidget(QLabel(label))
+        ]
+
+        for text, widget in fields:
+            label = QLabel(text)
+            label.setFont(font_label)
+            layout.addWidget(label)
+
+            widget.setFont(font_input)
+            widget.setMinimumHeight(input_height)
             layout.addWidget(widget)
 
         layout.addWidget(save_btn)
